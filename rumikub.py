@@ -22,6 +22,14 @@ class Tile():
     def __repr__(self):
         return str(self.color.value) + str(self.number)
 
+    def __eq__(self, other):
+        if isinstance(other, Tile):
+            return self.number == other.number and self.color.value == other.color.value
+        return False
+
+    def __hash__(self):
+        return hash(self.color.value + str(self.number))
+
 class OrderedTileGroup():
     def __init__(self, startingTiles = []):
         self.tiles = startingTiles
@@ -61,6 +69,9 @@ class OrderedTileGroup():
 
     def __iter__(self):
         return iter(self.tiles)
+    
+    def __getitem__(self, index):
+        return self.tiles[index]
 
 class Player():
     def __init__(self, name):
@@ -115,17 +126,18 @@ class Game():
         player = self.players[self.playerUp]
         move = player.canPlay()
         if (move):
-            print("play move", move)
+            print(player.name, "'s turn. ", player.hand, ". Playing move: ", ", ".join(map(str, move)))
             player.makeMove(move)
             self.board.extend(move)
         else:
+            print(player.name, " picked one")
             self.players[self.playerUp].giveTile(self.pickOne())
         self.printGameState()
         self.nextPlayerUp()
 
     def printGameState(self):
         print(", ".join(list(map(lambda p: p.name + " " + str(len(p.hand)), self.players))))
-        print(self.board)
+        print("Board:", ", ".join(map(str, self.board)))
 
     def pickOne(self):
         tile = random.choice(self.unselectedTiles.tiles)
@@ -133,7 +145,7 @@ class Game():
 
     def pick14(self):
         pickedTiles = OrderedTileGroup([])
-        for _ in range(14):
+        for _ in range(24):
             tile = self.pickOne()
             pickedTiles.addTile(tile)
             self.unselectedTiles.tiles.remove(tile)
@@ -143,19 +155,20 @@ def findPlayableGroups(tiles):
     def generateSetCombinations(tiles):
         result = []
         for r in range(3, len(tiles) + 1):
-            result.extend(combinations(tiles, r))
+            result.extend(map(lambda t: OrderedTileGroup(t), combinations(set(tiles), r)))
         return result
 
     def generateRunCombinations(tile_group):
         tiles = sorted(tile_group.tiles, key=lambda t: t.number)
         result = []
         for start in range(len(tiles)):
-            run = [tiles[start]]
+            run = OrderedTileGroup([])
+            run.addTile(tiles[start])
             for next_tile in tiles[start + 1:]:
                 if next_tile.number == run[-1].number + 1:
-                    run.append(next_tile)
+                    run.addTile(next_tile)
                     if len(run) >= 3:
-                        result.append(tuple(run))
+                        result.append(run)
                 else:
                     break
         return result
