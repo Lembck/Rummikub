@@ -30,6 +30,17 @@ class OrderedTileGroup():
         spotToAdd = next((i for i, _ in enumerate(self.tiles) if tile.index < self.tiles[i].index), len(self.tiles))
         self.tiles.insert(spotToAdd, tile)
 
+    def addTiles(self, tiles):
+        for tile in tiles:
+            self.addTile(tile)
+
+    def removeTile(self, tile):
+        self.tiles.remove(tile)
+
+    def removeTiles(self, tiles):
+        for tile in tiles:
+            self.removeTile(tile)
+
     def filterByNumber(self, num):
         return OrderedTileGroup(list(filter(lambda t: t.number == num, self.tiles)))
 
@@ -50,26 +61,83 @@ class OrderedTileGroup():
 
     def __iter__(self):
         return iter(self.tiles)
+
+class Player():
+    def __init__(self, name):
+        self.name = name
+        self.initialMeld = False
+        self.hand = OrderedTileGroup([])
+
+    def giveTiles(self, tiles):
+        self.hand.addTiles(tiles)
+
+    def giveTile(self, tile):
+        self.hand.addTile(tile)
+
+    def canPlay(self):
+        bestMove = findBestMove(self.hand)[1]
+        if len(bestMove) > 0:
+            return bestMove
+        else:
+            return False
+
+    def makeMove(self, moves):
+        for group in moves:
+            self.hand.removeTiles(group)
         
 class Game():
-    def __init__(self):
+    def __init__(self, player_names):
+        self.players = [Player(name) for name in player_names]
+        self.playerUp = 0
         self.unselectedTiles = OrderedTileGroup()
+        self.board = []
         self.createAllTiles()
+        self.startGame()
+
+    def nextPlayerUp(self):
+        self.playerUp = (self.playerUp + 1) % len(self.players)
 
     def createAllTiles(self):
         for color in colors:
-            for i in range(1, 14):
-                self.unselectedTiles.addTile(Tile(color, i))
+            for i in range(0, 26):
+                self.unselectedTiles.addTile(Tile(color, (i % 13) + 1))
+
+    def gameOver(self):
+        return all(map(lambda p: p.emptyHand(), self.players))
+
+    def startGame(self):
+        for player in self.players:
+            player.giveTiles(self.pick14())
+        # while not self.gameOver():
+        self.playRound()
+        
+    def playRound(self):
+        player = self.players[self.playerUp]
+        move = player.canPlay()
+        if (move):
+            print("play move", move)
+            player.makeMove(move)
+            self.board.extend(move)
+        else:
+            self.players[self.playerUp].giveTile(self.pickOne())
+        self.printGameState()
+        self.nextPlayerUp()
+
+    def printGameState(self):
+        print(", ".join(list(map(lambda p: p.name + " " + str(len(p.hand)), self.players))))
+        print(self.board)
+
+    def pickOne(self):
+        tile = random.choice(self.unselectedTiles.tiles)
+        return tile
 
     def pick14(self):
         pickedTiles = OrderedTileGroup([])
-        
-        for _ in range(26):
-            tile = random.choice(self.unselectedTiles.tiles)
+        for _ in range(14):
+            tile = self.pickOne()
             pickedTiles.addTile(tile)
             self.unselectedTiles.tiles.remove(tile)
-            
-        findBestMove(pickedTiles)
+        return pickedTiles
 
 def findPlayableGroups(tiles):
     def generateSetCombinations(tiles):
@@ -136,13 +204,11 @@ def findBestMove(tiles):
                     groupsPlayedSum = groupsPlayed
             
     iterative(tiles, findPlayableGroups(tiles), [])
-    print(bestTilesByNum, numOfTiles, bestTilesByNum.sum(), groupsPlayedNum)
-    print(bestTilesBySum, len(bestTilesBySum), sumOfTiles, groupsPlayedSum)
+    return (groupsPlayedNum, groupsPlayedSum)
+    #print(bestTilesByNum, numOfTiles, bestTilesByNum.sum(), groupsPlayedNum)
+    #print(bestTilesBySum, len(bestTilesBySum), sumOfTiles, groupsPlayedSum)
     
-
-#game = Game()
-#organizeTiles(game.unselectedTiles)
-#game.pick14()
+game = Game(["Michael", "Thomas", "Lucas", "Jian"])
 
 def stringToOrderedTileGroup(tile_string):
     tile_list = OrderedTileGroup()
@@ -153,5 +219,5 @@ def stringToOrderedTileGroup(tile_string):
         tile_list.addTile(Tile(color, number))
     return tile_list
 
-x = stringToOrderedTileGroup("u2.u3.u4.y8.y9.y10.k8.u8.r8.y5.r5.u5.k5.k6.k7.y2.k2.r2.r1.r3.y11")
-findBestMove(x)
+#x = stringToOrderedTileGroup("u2.u3.u4.y8.y9.y10.k8.u8.r8.y5.r5.u5.k5.k6.k7.y2.k2.r2.r1.r3")
+#findBestMove(x)
