@@ -140,6 +140,18 @@ def findBestMove(tiles):
     print(bestTilesBySum, len(bestTilesBySum), sumOfTiles, groupsPlayedSum)
     
 
-game = Game()
+#game = Game()
 #organizeTiles(game.unselectedTiles)
-game.pick14()
+#game.pick14()
+
+def stringToOrderedTileGroup(tile_string):
+    tile_list = OrderedTileGroup()
+    for tile_info in tile_string.split('.'):
+        color_char = tile_info[0]
+        number = int(tile_info[1:])
+        color = next(color for color in Color if color.value == color_char)
+        tile_list.addTile(Tile(color, number))
+    return tile_list
+
+x = stringToOrderedTileGroup("u2.u3.u4.y8.y9.y10.k8.u8.r8.y5.r5.u5.k5.k6.k7.y2.k2.r2.r1.r3.y11")
+findBestMove(x)
