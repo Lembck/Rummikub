@@ -36,6 +36,9 @@ class OrderedTileGroup():
     def filterByColor(self, color):
         return OrderedTileGroup(list(filter(lambda t: t.color == color, self.tiles)))
 
+    def sum(self):
+        return sum(map(lambda t: t.number, self.tiles))
+
     def __str__(self):
         return ".".join(map(str, self.tiles))
 
@@ -60,14 +63,15 @@ class Game():
 
     def pick14(self):
         pickedTiles = OrderedTileGroup([])
-        for _ in range(20):
+        
+        for _ in range(26):
             tile = random.choice(self.unselectedTiles.tiles)
-            #print(tile)
             pickedTiles.addTile(tile)
             self.unselectedTiles.tiles.remove(tile)
-        print(pickedTiles, organizeTiles(pickedTiles))
+            
+        findBestMove(pickedTiles)
 
-def organizeTiles(tiles):
+def findPlayableGroups(tiles):
     def generateSetCombinations(tiles):
         result = []
         for r in range(3, len(tiles) + 1):
@@ -75,17 +79,17 @@ def organizeTiles(tiles):
         return result
 
     def generateRunCombinations(tile_group):
-        tiles = sorted(tile_group.tiles, key=lambda t: t.number)  # Sort tiles by number
+        tiles = sorted(tile_group.tiles, key=lambda t: t.number)
         result = []
         for start in range(len(tiles)):
             run = [tiles[start]]
             for next_tile in tiles[start + 1:]:
-                if next_tile.number == run[-1].number + 1:  # Check for consecutive numbers
+                if next_tile.number == run[-1].number + 1:
                     run.append(next_tile)
-                    if len(run) >= 3:  # Add only if the run has at least 3 tiles
+                    if len(run) >= 3:
                         result.append(tuple(run))
                 else:
-                    break  # Stop if the sequence is broken
+                    break
         return result
 
     groups = []
@@ -99,6 +103,42 @@ def organizeTiles(tiles):
         groups.extend(generateRunCombinations(colorTiles))
 
     return groups
+
+def findBestMove(tiles):
+    bestTilesByNum = tiles
+    numOfTiles = len(tiles)
+    groupsPlayedNum = []
+    
+    bestTilesBySum = tiles
+    sumOfTiles = tiles.sum()
+    groupsPlayedSum = []
+    
+    def iterative(tiles, groups, groupsPlayed):
+        nonlocal numOfTiles, bestTilesByNum, groupsPlayedNum, sumOfTiles, bestTilesBySum, groupsPlayedSum
+        for i, group in enumerate(groups):
+            if all(tile in tiles for tile in group):
+                remainingTiles = tiles.tiles[:]
+                for tile in group:
+                    remainingTiles.remove(tile)
+                remainingGroups = groups[:]
+                remainingGroups.pop(i)
+                nextGroupsPlayed = groupsPlayed[:]
+                nextGroupsPlayed.append(group)
+                iterative(OrderedTileGroup(remainingTiles), remainingGroups, nextGroupsPlayed)
+            else:
+                if (len(tiles) < numOfTiles) or (len(tiles) == numOfTiles and tiles.sum() < bestTilesByNum.sum()):
+                    bestTilesByNum = tiles
+                    numOfTiles = len(tiles)
+                    groupsPlayedNum = groupsPlayed
+                if tiles.sum() < sumOfTiles or (tiles.sum() == sumOfTiles and len(tiles) < len(bestTilesBySum)):
+                    bestTilesBySum = tiles
+                    sumOfTiles = tiles.sum()
+                    groupsPlayedSum = groupsPlayed
+            
+    iterative(tiles, findPlayableGroups(tiles), [])
+    print(bestTilesByNum, numOfTiles, bestTilesByNum.sum(), groupsPlayedNum)
+    print(bestTilesBySum, len(bestTilesBySum), sumOfTiles, groupsPlayedSum)
+    
 
 game = Game()
 #organizeTiles(game.unselectedTiles)
